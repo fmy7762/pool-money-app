@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>プール金管理</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- アイコン用 -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <header class="header">
+      <h1>プール金残高</h1>
+    </header>
+
+    <main class="main-content">
+      <!-- 残高カード -->
+      <section class="balance-card">
+        <div class="balance-label">現在の残高</div>
+        <div class="balance-amount"><span>¥</span><span id="total-balance">0</span></div>
+      </section>
+
+      <!-- アクションボタン群 -->
+      <section class="action-buttons">
+        <button class="btn btn-income" onclick="openModal('income')">
+          <span class="material-icons-round">add_circle</span>
+          入金（集金）
+        </button>
+        <button class="btn btn-expense" onclick="openModal('expense')">
+          <span class="material-icons-round">remove_circle</span>
+          支出（利用）
+        </button>
+      </section>
+
+      <section class="history-section">
+        <div class="history-header">
+          <h2>利用履歴</h2>
+        </div>
+        <div class="history-list" id="history-list">
+          <div id="loading-spinner" class="loading">データを読み込み中...</div>
+          <!-- JSで履歴アイテムがここに生成されます -->
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 入力用モーダル (ガラスモーフィズム) -->
+  <div class="modal-overlay" id="transaction-modal" onclick="closeModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 id="modal-title">入金を追加</h3>
+        <button class="close-btn" onclick="closeModal()">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <form id="transaction-form" onsubmit="submitTransaction(event)">
+        <input type="hidden" id="tx-type" value="income">
+        
+        <div class="form-group">
+          <label for="tx-date">日付</label>
+          <input type="date" id="tx-date" required>
+        </div>
+
+        <div class="form-group">
+          <label for="tx-amount">金額</label>
+          <div class="amount-input-wrapper">
+            <span class="currency-symbol">¥</span>
+            <input type="number" id="tx-amount" placeholder="0" pattern="\d*" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="tx-memo">用途・メモ</label>
+          <input type="text" id="tx-memo" placeholder="例：11月分集金、飲み代など" required>
+        </div>
+
+        <button type="submit" class="btn-submit" id="btn-submit">登録する</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(registration => console.log('SW registered'))
+          .catch(err => console.log('SW refistration failed:', err));
+      });
+    }
+  </script>
+</body>
+</html>
