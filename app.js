@@ -14,7 +14,8 @@ const btnSubmit = document.getElementById('btn-submit');
 // 初期表示
 document.addEventListener('DOMContentLoaded', () => {
   // 日付の初期値を今日にセット
-  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
   txDateInput.value = today;
   
   // スマホなどでの引っ張り更新を防ぐ設定
@@ -69,10 +70,21 @@ function renderApp() {
     const isIncome = tx.type === 'income';
     const amountStr = (isIncome ? '+' : '-') + '¥' + tx.amount.toLocaleString();
     const amountClass = isIncome ? 'amount-positive' : 'amount-negative';
-    const displayDate = tx.date.split('T')[0]; // yyyy-MM-ddの抽出
+    
+    // 日付フォーマット YYYY-MM-DDTHH:mm を読みやすく
+    let displayDate = tx.date;
+    try {
+      if(tx.date) {
+        // GASから "2023-11-20T14:30" などの形式が来るか、ISO形式が来る
+        const d = new Date(tx.date);
+        if(!isNaN(d)) {
+          displayDate = d.toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+      }
+    } catch(e) {}
 
     const itemHTML = `
-      <div class="history-item">
+      <div class="history-item" onclick="openEditModal('${tx.id}')">
         <div class="history-info">
           <div class="history-title">${tx.memo}</div>
           <div class="history-meta">
@@ -91,6 +103,8 @@ function openModal(type) {
   const modalTitle = document.getElementById('modal-title');
   const typeInput = document.getElementById('tx-type');
 
+  document.getElementById('tx-id').value = '';
+  document.getElementById('btn-delete').style.display = 'none';
   typeInput.value = type;
 
   if (type === 'income') {
@@ -113,9 +127,54 @@ function closeModal(event) {
   // フォームクリア
   setTimeout(() => {
     txForm.reset();
-    const today = new Date().toISOString().split('T')[0];
-    txDateInput.value = today;
+    document.getElementById('tx-id').value = '';
+    document.getElementById('btn-delete').style.display = 'none';
+    const now = new Date();
+    txDateInput.value = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
   }, 300);
+}
+
+// 編集モーダルのオープン
+function openEditModal(id) {
+  // idはGAS側で発行される場合StringやNumberなどが混ざるため緩い比較
+  const tx = transactions.find(t => String(t.id) === String(id));
+  if (!tx) return;
+  
+  const modalTitle = document.getElementById('modal-title');
+  const typeInput = document.getElementById('tx-type');
+  const idInput = document.getElementById('tx-id');
+  const amountInput = document.getElementById('tx-amount');
+  const memoInput = document.getElementById('tx-memo');
+  const btnDelete = document.getElementById('btn-delete');
+  
+  idInput.value = tx.id;
+  typeInput.value = tx.type;
+  
+  // yyyy-MM-ddTHH:mm 形式に変換
+  let dateVal = tx.date;
+  if(dateVal) {
+    const d = new Date(dateVal);
+    if(!isNaN(d)) {
+      dateVal = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+    }
+  }
+  txDateInput.value = dateVal || '';
+  
+  amountInput.value = tx.amount;
+  memoInput.value = tx.memo;
+  
+  if (tx.type === 'income') {
+    modalTitle.textContent = '入金（集金）の編集';
+    btnSubmit.style.backgroundColor = 'var(--income-color)';
+    btnSubmit.textContent = '更新する';
+  } else {
+    modalTitle.textContent = '支出（利用）の編集';
+    btnSubmit.style.backgroundColor = 'var(--expense-color)';
+    btnSubmit.textContent = '更新する';
+  }
+  
+  btnDelete.style.display = 'block'; // 削除ボタンを表示
+  modalOverlay.classList.add('active');
 }
 
 // データ登録処理 (GASへのPOST通信)
@@ -127,13 +186,17 @@ async function submitTransaction(event) {
     return;
   }
 
+  const idValue = document.getElementById('tx-id').value;
   const type = document.getElementById('tx-type').value;
   const date = document.getElementById('tx-date').value;
   const amount = parseInt(document.getElementById('tx-amount').value, 10);
   const memo = document.getElementById('tx-memo').value;
 
+  const isUpdate = idValue !== '';
+
   const newTx = {
-    id: Date.now(),
+    action: isUpdate ? 'update' : 'create',
+    id: isUpdate ? idValue : Date.now(), // 既存IDか新規時刻
     date,
     type,
     amount,
@@ -157,8 +220,12 @@ async function submitTransaction(event) {
 
     const result = await response.json();
     if (result.status === 'success') {
-      // 成功した場合、ローカルの配列にも追加して画面を即時更新
-      transactions.push(newTx);
+      if (isUpdate) {
+        const index = transactions.findIndex(t => String(t.id) === String(newTx.id));
+        if (index > -1) transactions[index] = newTx;
+      } else {
+        transactions.push(newTx);
+      }
       renderApp();
       closeModal();
     } else {
@@ -174,3 +241,42 @@ async function submitTransaction(event) {
     btnSubmit.style.opacity = '1';
   }
 }
+
+// 削除処理
+async function deleteTransaction() {
+  const idValue = document.getElementById('tx-id').value;
+  if (!idValue) return;
+  if (!confirm('この履歴を削除してもよろしいですか？')) return;
+  
+  if (!GAS_URL) return;
+
+  const originalBtnText = btnSubmit.textContent;
+  btnSubmit.textContent = '削除中...';
+  btnSubmit.disabled = true;
+  document.getElementById('btn-delete').disabled = true;
+  
+  try {
+    const response = await fetch(GAS_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: 'delete', id: idValue }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" }
+    });
+    
+    const result = await response.json();
+    if (result.status === 'success') {
+      transactions = transactions.filter(t => String(t.id) !== String(idValue));
+      renderApp();
+      closeModal();
+    } else {
+      throw new Error(result.message);
+    }
+  } catch (error) {
+    console.error('Delete failed', error);
+    alert('削除に失敗しました。ネットワークを確認してください。');
+  } finally {
+    btnSubmit.textContent = originalBtnText;
+    btnSubmit.disabled = false;
+    document.getElementById('btn-delete').disabled = false;
+  }
+}
+

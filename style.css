@@ -143,6 +143,12 @@ body {
   justify-content: space-between;
   align-items: center;
   border: 1px solid var(--glass-border);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.history-item:active {
+  background-color: var(--surface-light);
 }
 
 .history-info {
@@ -280,21 +286,39 @@ body {
   font-weight: 600;
 }
 
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
 .btn-submit {
-  width: 100%;
+  flex: 2;
   padding: 18px;
   border: none;
   border-radius: 12px;
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
-  margin-top: 12px;
   background-color: var(--primary-color);
   color: #000;
   transition: transform 0.2s, opacity 0.2s;
 }
 
-.btn-submit:active {
+.btn-delete {
+  flex: 1;
+  padding: 18px;
+  background-color: transparent;
+  color: var(--expense-color);
+  border: 1px solid var(--expense-color);
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.btn-submit:active, .btn-delete:active {
   transform: scale(0.98);
 }
 

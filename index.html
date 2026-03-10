@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>プール金管理</title>
+  <title>経費管理</title>
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,7 +17,7 @@
 <body>
   <div class="app-container">
     <header class="header">
-      <h1>プール金残高</h1>
+      <h1>経費残高</h1>
     </header>
 
     <main class="main-content">
@@ -61,11 +61,12 @@
         </button>
       </div>
       <form id="transaction-form" onsubmit="submitTransaction(event)">
+        <input type="hidden" id="tx-id" value="">
         <input type="hidden" id="tx-type" value="income">
         
         <div class="form-group">
-          <label for="tx-date">日付</label>
-          <input type="date" id="tx-date" required>
+          <label for="tx-date">日時</label>
+          <input type="datetime-local" id="tx-date" required>
         </div>
 
         <div class="form-group">
@@ -81,7 +82,10 @@
           <input type="text" id="tx-memo" placeholder="例：11月分集金、飲み代など" required>
         </div>
 
-        <button type="submit" class="btn-submit" id="btn-submit">登録する</button>
+        <div class="modal-actions">
+          <button type="button" class="btn-delete" id="btn-delete" style="display: none;" onclick="deleteTransaction()">削除する</button>
+          <button type="submit" class="btn-submit" id="btn-submit">登録する</button>
+        </div>
       </form>
     </div>
   </div>
