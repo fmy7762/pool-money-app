@@ -1,9 +1,10 @@
-const CACHE_NAME = 'shared-expense-app-v1';
+const CACHE_NAME = 'shared-expense-app-v2';
 const urlsToCache = [
   './index.html',
   './style.css',
   './app.js',
   './manifest.json',
+  './icon.png',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
   'https://fonts.googleapis.com/icon?family=Material+Icons+Round'
 ];
