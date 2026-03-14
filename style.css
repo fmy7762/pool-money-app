@@ -622,3 +622,21 @@ body {
 .refresh-btn:disabled {
   opacity: 0.5;
 }
+
+/* 日付入力のはみ出し修正 */
+.form-group {
+  overflow: hidden;
+}
+
+.form-group input {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+input[type="datetime-local"] {
+  appearance: none;
+  -webkit-appearance: none;
+  font-size: 0.92rem;
+  padding: 16px 12px;
+}
