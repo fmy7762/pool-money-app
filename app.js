@@ -52,7 +52,7 @@ function renderApp() {
   const total = transactions.reduce((acc, tx) => {
     if (tx.type === 'income') return acc + tx.amount;
     if (tx.type === 'expense') return acc - tx.amount;
-    // advance はここでは計算しない（精算時に expense として登録されるため）
+    if (tx.type === 'settled') return acc - tx.amount; // 精算済み立替も支出として引く
     return acc;
   }, 0);
 
