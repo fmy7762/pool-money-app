@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shared-expense-app-v2';
+const CACHE_NAME = 'shared-expense-app-v3';
 const urlsToCache = [
   './index.html',
   './style.css',
@@ -18,23 +18,43 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
-// ネットワークリクエストの処理（オフライン対応・キャッシュ優先）
+// ネットワークリクエストの処理（ネットワーク優先）
 self.addEventListener('fetch', event => {
-  // GAS APIへのリクエストなど、動的通信はキャッシュしない
+  // GAS APIはキャッシュしない
   if (event.request.url.includes('script.google.com')) {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // キャッシュがあればそれを返し、なければネットワークへ
+  // Googleフォントはキャッシュ優先（外部リソースなので変更なし）
+  if (event.request.url.includes('fonts.googleapis.com') || 
+      event.request.url.includes('fonts.gstatic.com')) {
+    event.respondWith(
+      caches.match(event.request).then(response => {
         return response || fetch(event.request).then(fetchRes => {
           return caches.open(CACHE_NAME).then(cache => {
             cache.put(event.request, fetchRes.clone());
             return fetchRes;
           });
         });
+      })
+    );
+    return;
+  }
+
+  // index.html / app.js / style.css などはネットワーク優先
+  // → GitHubを更新したら即反映される
+  event.respondWith(
+    fetch(event.request)
+      .then(fetchRes => {
+        // 取得成功したら最新をキャッシュに保存して返す
+        return caches.open(CACHE_NAME).then(cache => {
+          cache.put(event.request, fetchRes.clone());
+          return fetchRes;
+        });
+      })
+      .catch(() => {
+        // オフライン時はキャッシュから返す
+        return caches.match(event.request);
       })
   );
 });
