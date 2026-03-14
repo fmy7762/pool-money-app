@@ -8,9 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- アイコン用 -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-  <!-- Web Clip Icon (iOS用) -->
   <link rel="apple-touch-icon" href="icon.png">
   <link rel="manifest" href="manifest.json">
 </head>
@@ -37,21 +35,36 @@
           <span class="material-icons-round">remove_circle</span>
           支出（利用）
         </button>
+        <button class="btn btn-advance" onclick="openModal('advance')">
+          <span class="material-icons-round">swap_horiz</span>
+          立替入力
+        </button>
       </section>
 
+      <!-- 未精算の立替リスト -->
+      <section class="advance-section" id="advance-section" style="display:none;">
+        <div class="history-header">
+          <h2>
+            <span class="material-icons-round" style="font-size:1.1em;vertical-align:-3px;margin-right:4px;">pending_actions</span>
+            未精算の立替
+          </h2>
+        </div>
+        <div class="advance-list" id="advance-list"></div>
+      </section>
+
+      <!-- 利用履歴 -->
       <section class="history-section">
         <div class="history-header">
           <h2>利用履歴</h2>
         </div>
         <div class="history-list" id="history-list">
           <div id="loading-spinner" class="loading">データを読み込み中...</div>
-          <!-- JSで履歴アイテムがここに生成されます -->
         </div>
       </section>
     </main>
   </div>
 
-  <!-- 入力用モーダル (ガラスモーフィズム) -->
+  <!-- 入力用モーダル -->
   <div class="modal-overlay" id="transaction-modal" onclick="closeModal(event)">
     <div class="modal-content" onclick="event.stopPropagation()">
       <div class="modal-header">
@@ -63,8 +76,14 @@
       <form id="transaction-form" onsubmit="submitTransaction(event)">
         <input type="hidden" id="tx-id" value="">
         <input type="hidden" id="tx-type" value="income">
-        
-        <div class="form-group">
+
+        <!-- 立替者名（立替時のみ表示） -->
+        <div class="form-group" id="form-group-payer" style="display:none;">
+          <label for="tx-payer">立替者の名前</label>
+          <input type="text" id="tx-payer" placeholder="例：山田さん">
+        </div>
+
+        <div class="form-group" id="form-group-date">
           <label for="tx-date">日時</label>
           <input type="datetime-local" id="tx-date" required>
         </div>
@@ -90,13 +109,31 @@
     </div>
   </div>
 
+  <!-- 精算確認モーダル -->
+  <div class="modal-overlay" id="settle-modal" onclick="closeSettleModal(event)">
+    <div class="modal-content settle-modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>立替を精算する</h3>
+        <button class="close-btn" onclick="closeSettleModal()">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <div class="settle-info" id="settle-info"></div>
+      <p class="settle-desc">精算すると支出として残高に反映され、履歴にアーカイブされます。</p>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="closeSettleModal()">キャンセル</button>
+        <button type="button" class="btn-settle" id="btn-settle-confirm" onclick="confirmSettle()">精算する</button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
           .then(registration => console.log('SW registered'))
-          .catch(err => console.log('SW refistration failed:', err));
+          .catch(err => console.log('SW registration failed:', err));
       });
     }
   </script>
