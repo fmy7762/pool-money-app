@@ -27,6 +27,18 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchData();
 });
 
+// 更新ボタン
+async function refreshApp() {
+  const btn = document.getElementById('refresh-btn');
+  const icon = btn.querySelector('.material-icons-round');
+  icon.style.transition = 'transform 0.6s ease';
+  icon.style.transform = 'rotate(360deg)';
+  btn.disabled = true;
+  setTimeout(() => { icon.style.transform = ''; icon.style.transition = ''; }, 600);
+  await fetchData();
+  btn.disabled = false;
+}
+
 // GASからデータ取得
 async function fetchData() {
   if (!GAS_URL) {
