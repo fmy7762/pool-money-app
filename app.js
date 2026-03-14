@@ -1,5 +1,7 @@
-// ■■■ ここにGASで発行されたウェブアプリのURLを貼り付けます ■■■
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxBiVm8Eke_HBb4oqrf9Ju3dNMexVybyoS17geB10KyYH6IE8UghBwW2wJ2eyq5q4_3/exec';
+// ■■■ JSONBin 設定 ■■■
+const BIN_ID = '69b5570fc3097a1dd5249b25';
+const API_KEY = '$2a$10$WDGQTE/btFlRftllospkteq7ZV7vhhVc00FWwTSY0SnuHjPUPHKsK';
+const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
 let transactions = [];
 
@@ -12,9 +14,8 @@ const txDateInput = document.getElementById('tx-date');
 const loadingEl = document.getElementById('loading-spinner');
 const btnSubmit = document.getElementById('btn-submit');
 
-let pendingSettleId = null; // 精算対象のID
+let pendingSettleId = null;
 
-// 初期表示
 document.addEventListener('DOMContentLoaded', () => {
   const now = new Date();
   const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
@@ -39,42 +40,50 @@ async function refreshApp() {
   btn.disabled = false;
 }
 
-// GASからデータ取得
+// JSONBinからデータ取得
 async function fetchData() {
-  if (!GAS_URL) {
-    loadingEl.textContent = 'GAS_URLが設定されていません。アプリにURLを登録してください。';
-    return;
-  }
   try {
-    const res = await fetch(GAS_URL);
+    const res = await fetch(BIN_URL + '/latest', {
+      headers: { 'X-Master-Key': API_KEY }
+    });
     if (!res.ok) throw new Error('Network response was not ok');
-    transactions = await res.json();
+    const json = await res.json();
+    transactions = json.record || [];
     renderApp();
   } catch (error) {
     console.error('Error fetching data:', error);
-    loadingEl.textContent = 'データの読み込みに失敗しました。時間をおいて再読み込みしてください。';
+    if (loadingEl) loadingEl.textContent = 'データの読み込みに失敗しました。時間をおいて再読み込みしてください。';
   }
+}
+
+// JSONBinにデータを保存（全件上書き）
+async function saveData() {
+  const res = await fetch(BIN_URL, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Master-Key': API_KEY
+    },
+    body: JSON.stringify(transactions)
+  });
+  if (!res.ok) throw new Error('Save failed');
 }
 
 // アプリ描画
 function renderApp() {
   if (loadingEl) loadingEl.style.display = 'none';
 
-  // 残高計算（立替は精算時に支出として計上するため、settled済みのもののみ反映）
   const total = transactions.reduce((acc, tx) => {
     if (tx.type === 'income') return acc + tx.amount;
     if (tx.type === 'expense') return acc - tx.amount;
-    if (tx.type === 'settled') return acc - tx.amount; // 精算済み立替も支出として引く
+    if (tx.type === 'settled') return acc - tx.amount;
     return acc;
   }, 0);
 
   totalBalanceEl.textContent = total.toLocaleString();
 
-  // 未精算の立替リスト
   const advances = transactions.filter(tx => tx.type === 'advance');
   renderAdvances(advances);
-
-  // 通常履歴（income / expense / settled）
   renderHistory();
 }
 
@@ -133,7 +142,6 @@ function renderHistory() {
     const amountStr = (isIncome ? '+' : '-') + '¥' + tx.amount.toLocaleString();
     const amountClass = isIncome ? 'amount-positive' : 'amount-negative';
 
-    // 精算済みアーカイブのラベル
     const settledBadge = isSettled
       ? `<span class="settled-badge"><span class="material-icons-round" style="font-size:0.85em;vertical-align:-1px;">check</span> 精算済み</span>`
       : '';
@@ -168,12 +176,11 @@ function openModal(type) {
   document.getElementById('btn-delete').style.display = 'none';
   typeInput.value = type;
 
-  // 立替者フィールドの表示切替
   if (type === 'advance') {
     payerGroup.style.display = 'block';
     payerInput.required = true;
     modalTitle.textContent = '立替を追加';
-    btnSubmit.style.backgroundColor = 'var(--advance-color, #f59e0b)';
+    btnSubmit.style.backgroundColor = 'var(--advance-color, #FFB74D)';
     btnSubmit.textContent = '立替を登録する';
   } else {
     payerGroup.style.display = 'none';
@@ -244,40 +251,20 @@ async function confirmSettle() {
   const now = new Date();
   const settleDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
 
-  // GASに2つのアクションを送る：
-  // 1. 立替レコードを削除
-  // 2. 精算済みとして expense レコードを新規作成
-  const settledTx = {
-    action: 'settle',
-    originalId: tx.id,
-    id: Date.now(),
-    date: settleDate,
-    type: 'settled',
-    amount: tx.amount,
-    memo: tx.memo,
-    payer: tx.payer || ''
-  };
-
   try {
-    const response = await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify(settledTx),
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+    transactions = transactions.filter(t => String(t.id) !== String(tx.id));
+    transactions.push({
+      id: String(Date.now()),
+      date: settleDate,
+      type: 'settled',
+      amount: tx.amount,
+      memo: tx.memo,
+      payer: tx.payer || ''
     });
-    const result = await response.json();
 
-    if (result.status === 'success') {
-      // ローカルのデータを更新
-      transactions = transactions.filter(t => String(t.id) !== String(tx.id));
-      transactions.push({
-        ...settledTx,
-        action: undefined
-      });
-      renderApp();
-      closeSettleModal();
-    } else {
-      throw new Error(result.message || 'Server error');
-    }
+    await saveData();
+    renderApp();
+    closeSettleModal();
   } catch (error) {
     console.error('Settle failed:', error);
     alert('精算に失敗しました。ネットワークを確認してください。');
@@ -320,7 +307,7 @@ function openEditModal(id) {
     payerInput.required = true;
     payerInput.value = tx.payer || '';
     modalTitle.textContent = '立替の編集';
-    btnSubmit.style.backgroundColor = 'var(--advance-color, #f59e0b)';
+    btnSubmit.style.backgroundColor = 'var(--advance-color, #FFB74D)';
   } else if (tx.type === 'income') {
     payerGroup.style.display = 'none';
     payerInput.required = false;
@@ -338,11 +325,9 @@ function openEditModal(id) {
   modalOverlay.classList.add('active');
 }
 
-// データ登録
+// データ登録・更新
 async function submitTransaction(event) {
   event.preventDefault();
-
-  if (!GAS_URL) { alert('GAS_URLが設定されていません'); return; }
 
   const idValue = document.getElementById('tx-id').value;
   const type = document.getElementById('tx-type').value;
@@ -353,8 +338,7 @@ async function submitTransaction(event) {
   const isUpdate = idValue !== '';
 
   const newTx = {
-    action: isUpdate ? 'update' : 'create',
-    id: isUpdate ? idValue : Date.now(),
+    id: isUpdate ? idValue : String(Date.now()),
     date, type, amount, memo,
     payer: type === 'advance' ? payer : ''
   };
@@ -365,25 +349,16 @@ async function submitTransaction(event) {
   btnSubmit.style.opacity = '0.7';
 
   try {
-    const response = await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify(newTx),
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-    });
-    const result = await response.json();
-
-    if (result.status === 'success') {
-      if (isUpdate) {
-        const index = transactions.findIndex(t => String(t.id) === String(newTx.id));
-        if (index > -1) transactions[index] = newTx;
-      } else {
-        transactions.push(newTx);
-      }
-      renderApp();
-      closeModal();
+    if (isUpdate) {
+      const index = transactions.findIndex(t => String(t.id) === String(idValue));
+      if (index > -1) transactions[index] = newTx;
     } else {
-      throw new Error(result.message || 'Server returned an error');
+      transactions.push(newTx);
     }
+
+    await saveData();
+    renderApp();
+    closeModal();
   } catch (error) {
     console.error('Submission failed', error);
     alert('登録に失敗しました。ネットワークを確認してください。');
@@ -399,7 +374,6 @@ async function deleteTransaction() {
   const idValue = document.getElementById('tx-id').value;
   if (!idValue) return;
   if (!confirm('この履歴を削除してもよろしいですか？')) return;
-  if (!GAS_URL) return;
 
   const originalBtnText = btnSubmit.textContent;
   btnSubmit.textContent = '削除中...';
@@ -407,20 +381,10 @@ async function deleteTransaction() {
   document.getElementById('btn-delete').disabled = true;
 
   try {
-    const response = await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'delete', id: idValue }),
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-    });
-    const result = await response.json();
-
-    if (result.status === 'success') {
-      transactions = transactions.filter(t => String(t.id) !== String(idValue));
-      renderApp();
-      closeModal();
-    } else {
-      throw new Error(result.message);
-    }
+    transactions = transactions.filter(t => String(t.id) !== String(idValue));
+    await saveData();
+    renderApp();
+    closeModal();
   } catch (error) {
     console.error('Delete failed', error);
     alert('削除に失敗しました。ネットワークを確認してください。');
