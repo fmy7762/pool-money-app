@@ -590,3 +590,35 @@ body {
   border-radius: 12px;
   border: 1px dashed var(--glass-border);
 }
+
+/* 更新ボタン */
+.header {
+  position: relative;
+}
+
+.refresh-btn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--surface-light);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background 0.2s, color 0.2s;
+}
+
+.refresh-btn:active {
+  background: var(--glass-border);
+  color: var(--primary-color);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.5;
+}
