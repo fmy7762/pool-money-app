@@ -1,5 +1,5 @@
-const CACHE_NAME = 'shared-expense-app-v3';
-const urlsToCache = [
+const CACHE_NAME = 'shared-expense-app-v4';
+const STATIC_ASSETS = [
   './index.html',
   './style.css',
   './app.js',
@@ -9,65 +9,84 @@ const urlsToCache = [
   'https://fonts.googleapis.com/icon?family=Material+Icons+Round'
 ];
 
-// インストール時にキャッシュする
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
+      .then(cache => cache.addAll(STATIC_ASSETS))
   );
   self.skipWaiting();
 });
 
-// ネットワークリクエストの処理（ネットワーク優先）
 self.addEventListener('fetch', event => {
-  // GAS APIはキャッシュしない
-  if (event.request.url.includes('script.google.com')) {
+  const request = event.request;
+  const url = new URL(request.url);
+
+  if (request.method !== 'GET' || shouldBypassCache(url)) {
+    event.respondWith(fetch(request));
     return;
   }
 
-  // Googleフォントはキャッシュ優先（外部リソースなので変更なし）
-  if (event.request.url.includes('fonts.googleapis.com') || 
-      event.request.url.includes('fonts.gstatic.com')) {
-    event.respondWith(
-      caches.match(event.request).then(response => {
-        return response || fetch(event.request).then(fetchRes => {
-          return caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, fetchRes.clone());
-            return fetchRes;
-          });
-        });
-      })
-    );
+  if (isFontRequest(url)) {
+    event.respondWith(cacheFirst(request));
     return;
   }
 
-  // index.html / app.js / style.css などはネットワーク優先
-  // → GitHubを更新したら即反映される
-  event.respondWith(
-    fetch(event.request)
-      .then(fetchRes => {
-        // 取得成功したら最新をキャッシュに保存して返す
-        return caches.open(CACHE_NAME).then(cache => {
-          cache.put(event.request, fetchRes.clone());
-          return fetchRes;
-        });
-      })
-      .catch(() => {
-        // オフライン時はキャッシュから返す
-        return caches.match(event.request);
-      })
-  );
+  if (url.origin === self.location.origin || STATIC_ASSETS.includes(request.url)) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  event.respondWith(fetch(request));
 });
 
-// 古いキャッシュの削除
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.filter(name => name !== CACHE_NAME)
-          .map(name => caches.delete(name))
-      );
-    })
+    caches.keys().then(cacheNames => Promise.all(
+      cacheNames
+        .filter(name => name !== CACHE_NAME)
+        .map(name => caches.delete(name))
+    ))
   );
   self.clients.claim();
 });
+
+function shouldBypassCache(url) {
+  return url.hostname.endsWith('.supabase.co') ||
+    url.hostname === 'api.supabase.com' ||
+    url.hostname === 'api.jsonbin.io' ||
+    url.hostname === 'script.google.com' ||
+    url.pathname.includes('/auth/v1') ||
+    url.pathname.includes('/rest/v1') ||
+    url.pathname.includes('/storage/v1');
+}
+
+function isFontRequest(url) {
+  return url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
+}
+
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+
+  const response = await fetch(request);
+  if (response && response.ok) {
+    const cache = await caches.open(CACHE_NAME);
+    cache.put(request, response.clone());
+  }
+  return response;
+}
+
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch (error) {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    throw error;
+  }
+}
