@@ -45,7 +45,147 @@ body {
 .header h1 {
   font-size: 1.5rem;
   font-weight: 600;
-  letter-spacing: 0.5px;
+  letter-spacing: 0;
+}
+
+.user-actions {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 42%;
+}
+
+.user-status {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logout-btn {
+  background: var(--surface-light);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex: 0 0 40px;
+}
+
+.logout-btn .material-icons-round {
+  font-size: 20px;
+}
+
+.app-message {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  border: 1px solid var(--glass-border);
+  background: var(--surface-color);
+}
+
+.app-message.success {
+  color: var(--income-color);
+  border-color: rgba(3, 218, 198, 0.35);
+}
+
+.app-message.error {
+  color: var(--expense-color);
+  border-color: rgba(207, 102, 121, 0.4);
+}
+
+.app-message.warning {
+  color: var(--advance-color);
+  border-color: rgba(255, 183, 77, 0.4);
+}
+
+.app-message.info {
+  color: var(--primary-color);
+  border-color: rgba(187, 134, 252, 0.35);
+}
+
+.auth-panel {
+  background-color: var(--surface-color);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 22px;
+  margin-top: 24px;
+}
+
+.auth-panel h2 {
+  font-size: 1.2rem;
+  margin-bottom: 18px;
+  color: var(--text-primary);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auth-form label {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.auth-form input {
+  width: 100%;
+  background-color: var(--surface-light);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  border-radius: 12px;
+  padding: 15px;
+  font-size: 1rem;
+  outline: none;
+  font-family: inherit;
+}
+
+.auth-form input:focus {
+  border-color: var(--primary-color);
+}
+
+.auth-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.auth-actions button {
+  padding: 15px 12px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+#btn-sign-in {
+  background: var(--primary-color);
+  color: #000;
+}
+
+#btn-sign-up {
+  background: var(--surface-light);
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 /* 残高カード */
@@ -639,4 +779,22 @@ input[type="datetime-local"] {
   -webkit-appearance: none;
   font-size: 0.92rem;
   padding: 16px 12px;
+}
+
+@media (max-width: 430px) {
+  .header h1 {
+    font-size: 1.25rem;
+  }
+
+  .user-status {
+    display: none !important;
+  }
+
+  .user-actions {
+    max-width: 40px;
+  }
+
+  .auth-actions {
+    grid-template-columns: 1fr;
+  }
 }

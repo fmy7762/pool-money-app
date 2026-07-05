@@ -19,12 +19,35 @@
   <div class="app-container">
     <header class="header">
       <h1>経費残高</h1>
+      <div class="user-actions">
+        <span class="user-status" id="user-status" style="display:none;"></span>
+        <button class="logout-btn" id="btn-sign-out" onclick="signOut()" style="display:none;">
+          <span class="material-icons-round">logout</span>
+        </button>
+      </div>
       <button class="refresh-btn" onclick="refreshApp()" id="refresh-btn">
         <span class="material-icons-round">refresh</span>
       </button>
     </header>
 
+    <div class="app-message" id="app-message" style="display:none;"></div>
+
     <main class="main-content">
+      <section class="auth-panel" id="auth-panel">
+        <h2>ログイン</h2>
+        <div class="auth-form">
+          <label for="auth-email">メールアドレス</label>
+          <input type="email" id="auth-email" autocomplete="email" placeholder="you@example.com">
+          <label for="auth-password">パスワード</label>
+          <input type="password" id="auth-password" autocomplete="current-password" placeholder="6文字以上">
+          <div class="auth-actions">
+            <button type="button" id="btn-sign-in" onclick="signIn()">ログイン</button>
+            <button type="button" id="btn-sign-up" onclick="signUp()">新規登録</button>
+          </div>
+        </div>
+      </section>
+
+      <div id="app-content" style="display:none;">
       <!-- 残高カード -->
       <section class="balance-card">
         <div class="balance-label">現在の残高</div>
@@ -67,6 +90,7 @@
           <div id="loading-spinner" class="loading">データを読み込み中...</div>
         </div>
       </section>
+      </div>
     </main>
   </div>
 
@@ -133,6 +157,8 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
   <script src="app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
