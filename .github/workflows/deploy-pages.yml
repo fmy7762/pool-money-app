@@ -25,9 +25,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create runtime config
+      - name: Prepare site
         run: |
-          cat > config.js <<'EOF'
+          mkdir -p _site
+          cp index.html app.js style.css manifest.json icon.png _site/
+          cat > _site/config.js <<'EOF'
           window.APP_CONFIG = {
             SUPABASE_URL: "${{ secrets.SUPABASE_URL }}",
             SUPABASE_ANON_KEY: "${{ secrets.SUPABASE_ANON_KEY }}"
@@ -40,7 +42,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
 
       - name: Deploy
         id: deployment
